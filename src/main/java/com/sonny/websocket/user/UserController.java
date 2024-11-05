@@ -17,7 +17,7 @@ public class UserController {
     private final UserService userService;
 
     @MessageMapping("/user.addUser")
-    @SendTo("/user/topic")       // we will send notification to this queue
+    @SendTo("/user/public")       // we will send notification to this queue
     public User addUser(
             @Payload User user     // to say that the body of our request is 'user'
     ) {
@@ -26,7 +26,7 @@ public class UserController {
     }
 
     @MessageMapping("/user.disconnectUser")
-    @SendTo("/user/topic")
+    @SendTo("/user/public")
     public User disconnect(
             @Payload User user
     ) {

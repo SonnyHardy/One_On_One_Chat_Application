@@ -40,6 +40,7 @@ function onConnected() {
         {},
         JSON.stringify({nickName: nickname, fullName: fullname, status: 'ONLINE'})
         );
+    document.getElementById('connected-user-fullname').textContent = fullname;
 
     // find and display the connected users
     findAndDisplayConnectedUsers().then();
@@ -55,7 +56,7 @@ async function findAndDisplayConnectedUsers() {
     connectedUsersList.innerHTML = '';
     connectedUsers.forEach(user => {
         appendUserElement(user, connectedUsersList);
-        if (connectedUsers.index(user) < connectedUsers.length - 1) {
+        if (connectedUsers.indexOf(user) < connectedUsers.length - 1) {
             // add a separator
             const separator = document.createElement('li');
             separator.classList.add('separator');
@@ -140,7 +141,7 @@ function sendMessage(event) {
     if (messageContent && stompClient) {
         const chatMessage = {
             senderId: nickname,
-            receiverId: selectedUserId,
+            recipientId: selectedUserId,
             content: messageContent,
             timestamp: new Date(),
         };
@@ -151,10 +152,39 @@ function sendMessage(event) {
     event.preventDefault();
 }
 
-function onMessageReceived() {
+async function onMessageReceived(payload) {
+    await findAndDisplayConnectedUsers();
+    const message = JSON.parse(payload.body);
+    if (selectedUserId && selectedUserId === message.senderId) {
+        displayMessage(message.senderId, message.content);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
 
+    if (selectedUserId) {
+        document.getElementById(`${selectedUserId}`).classList.add('active');
+    }else {
+        messageForm.classList.add('hidden');
+    }
+
+    const notifiedUser = document.getElementById(`${message.senderId}`);
+    if (notifiedUser && !notifiedUser.classList.contains('active')) {
+        const nbrMsg = notifiedUser.querySelector('.nbr-msg');
+        nbrMsg.classList.remove('hidden');
+        nbrMsg.textContent = '';
+    }
+}
+
+function onLogout() {
+    stompClient.send('/app/user.disconnectUser', {},
+        JSON.stringify({nickName: nickname, fullName: fullname, status: 'OFFLINE'})
+        );
+    window.location.reload();
 }
 
 usernameForm.addEventListener('submit', connect, true);
 
 messageForm.addEventListener('submit', sendMessage, true);
+
+logout.addEventListener('click', onLogout, true);
+
+window.onbeforeunload = () => onLogout();
