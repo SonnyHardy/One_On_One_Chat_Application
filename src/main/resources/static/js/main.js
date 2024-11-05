@@ -135,8 +135,26 @@ function onError() {
 
 }
 
+function sendMessage(event) {
+    const messageContent = messageInput.value.trim();
+    if (messageContent && stompClient) {
+        const chatMessage = {
+            senderId: nickname,
+            receiverId: selectedUserId,
+            content: messageContent,
+            timestamp: new Date(),
+        };
+        stompClient.send('/app/chat', {}, JSON.stringify(chatMessage));
+        displayMessage(nickname, messageContent);
+    }
+    chatArea.scrollTop = chatArea.scrollHeight;
+    event.preventDefault();
+}
+
 function onMessageReceived() {
 
 }
 
 usernameForm.addEventListener('submit', connect, true);
+
+messageForm.addEventListener('submit', sendMessage, true);
