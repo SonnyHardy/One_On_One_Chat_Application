@@ -13,11 +13,12 @@ const logout = document.getElementById('logout');
 let stompClient = null;
 let nickname = null;
 let fullname = null;
-let selectedUser = null;
+let selectedUserId = null;
 
 function connect(event) {
-    nickname = document.getElementById('nickname');
-    fullname = document.getElementById('fullname');
+    nickname = document.getElementById('nickname').value.trim();
+    fullname = document.getElementById('fullname').value.trim();
+    console.log('yo ' + nickname + ' et  ' + fullname);
     if (nickname && fullname) {
         usernamePage.classList.add('hidden');
         chatPage.classList.remove('hidden');
@@ -37,7 +38,7 @@ function onConnected() {
     // register the connected user
     stompClient.send('/app/user.addUser',    // '/app' is the prefix that we configured in our WebSocketConfig
         {},
-        JSON.stringify({nickname: nickname, fullname: fullname, status: 'ONLINE'})
+        JSON.stringify({nickName: nickname, fullName: fullname, status: 'ONLINE'})
         );
 
     // find and display the connected users
@@ -48,11 +49,11 @@ async function findAndDisplayConnectedUsers() {
     const connectedUsersResponse = await fetch('/users');
     let connectedUsers = await connectedUsersResponse.json();
     // we want to return the list of the connected other users without the actual user
-    connectedUsers = connectedUsers.filter(user => user.nickname !== nickname);
+    connectedUsers = connectedUsers.filter(user => user.nickName !== nickname);
 
     const connectedUsersList = document.getElementById('connectedUsers');
     connectedUsersList.innerHTML = '';
-    connectedUsersList.forEach(user => {
+    connectedUsers.forEach(user => {
         appendUserElement(user, connectedUsersList);
         if (connectedUsers.index(user) < connectedUsers.length - 1) {
             // add a separator
@@ -66,14 +67,14 @@ async function findAndDisplayConnectedUsers() {
 function appendUserElement(user, connectedUsersList) {
     const listItem = document.createElement('li');
     listItem.classList.add('user-item');
-    listItem.id = user.nickname;
+    listItem.id = user.nickName;
 
     const userImage = document.createElement('img');
     userImage.src = '../img/user_icon.png';
-    userImage.alt = user.fullname;
+    userImage.alt = user.fullName;
 
     const usernameSpan = document.createElement('span');
-    usernameSpan.textContent = user.fullname;
+    usernameSpan.textContent = user.fullName;
 
     const receivedMsgs = document.createElement('span');
     receivedMsgs.textContent = '0';
@@ -83,7 +84,51 @@ function appendUserElement(user, connectedUsersList) {
     listItem.appendChild(usernameSpan);
     listItem.appendChild(receivedMsgs);
 
+    listItem.addEventListener('click', userItemClick);
+
     connectedUsersList.appendChild(listItem);
+}
+
+function userItemClick(event) {
+    document.querySelectorAll('.user-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    messageForm.classList.remove('hidden');
+
+    const clickdUser = event.currentTarget;    // we select all the clicked elements
+    clickdUser.classList.add('active');
+
+    selectedUserId = clickdUser.getAttribute('id');
+    fetchAndDisplayUserChat().then();
+
+    const nbrMsg = clickdUser.querySelector('.nbr-msg');
+    nbrMsg.classList.add('hidden');
+}
+
+async function fetchAndDisplayUserChat() {
+    const userChatResponse = await fetch(`/messages/${nickname}/${selectedUserId}`);
+    const userChat = await userChatResponse.json();
+    chatArea.innerHTML = '';
+
+    userChat.forEach(chat => {
+        displayMessage(chat.senderId, chat.content);
+    });
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function displayMessage(senderId, content) {
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('message');
+    if (senderId === nickname) {
+        messageContainer.classList.add('sender');
+    }else {
+        messageContainer.classList.add('receiver');
+    }
+
+    const message = document.createElement('p');
+    message.textContent = content;
+    messageContainer.appendChild(message);
+    chatArea.appendChild(messageContainer);
 }
 
 function onError() {
